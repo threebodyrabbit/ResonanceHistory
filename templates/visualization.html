@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ResonanceHistory</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0d0d1a; color: #e8e0d0; font-family: Georgia, serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+    #header { padding: 8px 20px; display: flex; align-items: center; background: #0d0d1a; border-bottom: 1px solid #1e1a2e; flex-shrink: 0; z-index: 1000; }
+    #header h1 { font-size: 1rem; color: #c9a96e; letter-spacing: 0.08em; }
+    #header h1 span { font-size: 0.72rem; color: #443355; margin-left: 10px; font-weight: normal; }
+    #header-hint { font-size: 0.65rem; color: #332244; margin-left: 14px; }
+    #year-display { margin-left: auto; font-size: 1.3rem; color: #e8e0d0; font-variant-numeric: tabular-nums; }
+
+    #map { flex: 1; width: 100%; min-height: 0; }
+
+    #timeline-bar { flex-shrink: 0; background: #0d0d1a; border-top: 1px solid #1e1a2e; padding: 8px 20px 12px; z-index: 1000; }
+    #timeline-controls { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+    #play-btn { background: #2a2040; border: 1px solid #5a4a8a; color: #c9a96e; border-radius: 4px; padding: 3px 12px; cursor: pointer; font-size: 0.82rem; }
+    #play-btn:hover { background: #3a3060; }
+    #speed-select { background: #1a1530; border: 1px solid #3a3060; color: #aaa; border-radius: 4px; padding: 2px 6px; font-size: 0.78rem; }
+    #event-count { font-size: 0.7rem; color: #443344; margin-left: auto; }
+    #scrubber { width: 100%; accent-color: #c9a96e; cursor: pointer; }
+    #tick-labels { display: flex; justify-content: space-between; font-size: 0.6rem; color: #665566; margin-top: 3px; pointer-events: none; }
+
+    /* ── Event card (left, near dot) ── */
+    .ev-card {
+      position: fixed; width: 270px; background: rgba(10,8,22,0.97);
+      border: 1px solid #4a3a7a; border-radius: 10px; padding: 12px 14px;
+      z-index: 2000; box-shadow: 0 4px 28px rgba(0,0,0,0.7); display: none;
+    }
+    .ev-card.visible { display: block; }
+    .ev-card-close { float: right; cursor: pointer; color: #554455; font-size: 1rem; }
+    .ev-card-close:hover { color: #c9a96e; }
+    .ev-card-title { font-size: 0.95rem; color: #c9a96e; margin-bottom: 2px; padding-right: 18px; line-height: 1.3; }
+    .ev-card-local { font-size: 0.78rem; color: #7a6a9a; margin-bottom: 4px; }
+    .ev-card-meta { font-size: 0.68rem; color: #6a5a8a; margin-bottom: 8px; }
+    .ev-card-meta a { color: #7a6aaa; text-decoration: none; margin-left: 5px; }
+    .ev-card-meta a:hover { color: #c9a96e; }
+    .ev-card-img { width: 100%; max-height: 110px; object-fit: cover; border-radius: 5px; margin-bottom: 8px; display: none; }
+    .ev-card-desc { font-size: 0.78rem; line-height: 1.5; color: #bbb; margin-bottom: 8px; }
+    .ev-card-figs { display: flex; flex-wrap: wrap; gap: 4px; }
+    .fig-chip { display: flex; align-items: center; gap: 4px; background: #16122a; border: 1px solid #2e2248; border-radius: 14px; padding: 2px 7px 2px 4px; font-size: 0.7rem; color: #c9b090; }
+    .fig-av { width: 18px; height: 18px; border-radius: 50%; background: #2e2248; display: flex; align-items: center; justify-content: center; font-size: 0.58rem; color: #9080b0; flex-shrink: 0; }
+    .fig-role { color: #6a5a8a; font-size: 0.62rem; }
+
+    /* ── Resonance card (fixed top-right) ── */
+    #res-card {
+      position: fixed; top: 56px; right: 16px; width: 280px;
+      background: rgba(10,8,22,0.97); border: 1px solid #6a3a9a;
+      border-radius: 10px; padding: 12px 14px; z-index: 2100;
+      box-shadow: 0 4px 28px rgba(0,0,0,0.7); display: none;
+    }
+    #res-card.visible { display: block; }
+    #res-card-close { float: right; cursor: pointer; color: #554455; font-size: 1rem; }
+    #res-card-close:hover { color: #c9a96e; }
+    #res-card-label { font-size: 0.62rem; color: #6a3a9a; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
+    #res-card-title { font-size: 0.92rem; color: #c9a96e; margin-bottom: 2px; padding-right: 18px; line-height: 1.3; }
+    #res-card-local { font-size: 0.78rem; color: #7a6a9a; margin-bottom: 4px; }
+    #res-card-meta { font-size: 0.68rem; color: #6a5a8a; margin-bottom: 8px; }
+    #res-card-meta a { color: #7a6aaa; text-decoration: none; margin-left: 5px; }
+    #res-card-img { width: 100%; max-height: 100px; object-fit: cover; border-radius: 5px; margin-bottom: 8px; display: none; }
+    #res-card-desc { font-size: 0.78rem; line-height: 1.5; color: #bbb; margin-bottom: 8px; }
+    #res-reason-box { background: #16102a; border-left: 3px solid #6a3a9a; border-radius: 4px; padding: 8px 10px; font-size: 0.72rem; color: #c9b080; font-style: italic; line-height: 1.5; }
+    #res-reason-label { font-size: 0.6rem; color: #6a3a9a; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; font-style: normal; }
+
+    /* ── Toast ── */
+    #toast-container { position: fixed; top: 50px; left: 16px; width: 230px; z-index: 2000; display: flex; flex-direction: column; gap: 6px; pointer-events: none; }
+    .toast { background: rgba(10,8,22,0.95); border-left: 3px solid #c9a96e; border-radius: 5px; padding: 8px 10px; font-size: 0.73rem; color: #bbb; animation: fadeInOut 4s forwards; pointer-events: auto; cursor: pointer; }
+    .toast strong { display: block; color: #c9a96e; margin-bottom: 2px; font-size: 0.76rem; }
+    @keyframes fadeInOut { 0%{opacity:0;transform:translateX(-8px)} 10%{opacity:1;transform:translateX(0)} 75%{opacity:1} 100%{opacity:0} }
+    @keyframes pulse { 0%,100%{transform:scale(1);opacity:0.5} 50%{transform:scale(1.5);opacity:0.15} }
+
+    /* ── Legend ── */
+    #legend { position: fixed; bottom: 110px; left: 16px; background: rgba(10,8,22,0.85); border: 1px solid #1e1a2e; border-radius: 7px; padding: 8px 12px; z-index: 1000; font-size: 0.68rem; color: #776677; }
+    .legend-item { display: flex; align-items: center; gap: 7px; margin-bottom: 3px; }
+    .legend-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  </style>
+</head>
+<body>
+
+<div id="header">
+  <h1>ResonanceHistory <span>历史的回响</span></h1>
+  <span id="header-hint">click a dot to explore · connected events reveal historical echoes</span>
+  <div id="year-display">—</div>
+</div>
+
+<div id="map"></div>
+
+<div id="timeline-bar">
+  <div id="timeline-controls">
+    <button id="play-btn">▶ Play</button>
+    <select id="speed-select">
+      <option value="40">Fast</option>
+      <option value="120" selected>Normal</option>
+      <option value="300">Slow</option>
+    </select>
+    <span id="event-count"></span>
+  </div>
+  <input type="range" id="scrubber" min="0" max="1000" value="0" />
+  <div id="tick-labels"></div>
+</div>
+
+<div id="toast-container"></div>
+
+<!-- Main event card, positioned near clicked dot -->
+<div id="event-card" class="ev-card">
+  <span class="ev-card-close" id="card-close">✕</span>
+  <div class="ev-card-title" id="card-title"></div>
+  <div class="ev-card-local" id="card-local"></div>
+  <div class="ev-card-meta"  id="card-meta"></div>
+  <img class="ev-card-img"   id="card-image" alt="" />
+  <div class="ev-card-desc"  id="card-desc"></div>
+  <div class="ev-card-figs"  id="card-figures"></div>
+</div>
+
+<!-- Resonance card, fixed top-right -->
+<div id="res-card">
+  <span id="res-card-close">✕</span>
+  <div id="res-card-label">↔ Historical Echo</div>
+  <div id="res-card-title"></div>
+  <div id="res-card-local"></div>
+  <div id="res-card-meta"></div>
+  <img id="res-card-img" alt="" />
+  <div id="res-card-desc"></div>
+  <div id="res-reason-box">
+    <div id="res-reason-label">Why they resonate</div>
+    <div id="res-reason-text"></div>
+  </div>
+  <div id="res-card-note" style="display:none;font-size:0.68rem;color:#8a5aaa;margin-top:8px;letter-spacing:0.04em;"></div>
+</div>
+
+<div id="legend"></div>
+
+<script>
+const EVENTS = {{ events_json }};
+
+const CAT_COLOR = {
+  collapse:      '#e05050',
+  revolution:    '#e08030',
+  cultural_peak: '#50c0a0',
+  war:           '#c04060',
+  discovery:     '#5090e0',
+  migration:     '#a070d0',
+  pandemic:      '#d0a020',
+  disaster:      '#a06030',
+};
+const catColor  = c => CAT_COLOR[c] || '#888';
+const yearLabel = y => y < 0 ? `${Math.abs(y)} BCE` : `${y} CE`;
+const clamp     = (v, lo, hi) => Math.max(lo, Math.min(v, hi));
+
+const mapped  = EVENTS.filter(e => e.lat != null && e.lng != null);
+const idMap   = Object.fromEntries(mapped.map(e => [e.id, e]));
+const years   = mapped.map(e => e.year);
+const minYear = Math.min(...years);
+const maxYear = Math.max(...years);
+
+// ── Map ────────────────────────────────────────────────────────────────────
+const map = L.map('map', { center: [20, 10], zoom: 2 });
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  attribution: '© OpenStreetMap contributors © CARTO', maxZoom: 10,
+}).addTo(map);
+
+// Build resonance lookup: eventId → [{other, reason}]
+const resonanceMap = {};
+mapped.forEach(ev => {
+  (ev.resonances || []).forEach(rid => {
+    const other = idMap[rid];
+    if (!other?.lat) return;
+    const reason = ev.resonance_reasons?.[rid] || other.resonance_reasons?.[ev.id] || null;
+    if (!resonanceMap[ev.id]) resonanceMap[ev.id] = [];
+    if (!resonanceMap[rid])   resonanceMap[rid]   = [];
+    // avoid duplicates
+    if (!resonanceMap[ev.id].find(r => r.other.id === rid))
+      resonanceMap[ev.id].push({ other, reason });
+    if (!resonanceMap[rid].find(r => r.other.id === ev.id))
+      resonanceMap[rid].push({ other: ev, reason });
+  });
+});
+
+// ── Markers ────────────────────────────────────────────────────────────────
+const markers = new Map();
+
+function makeIcon(cat, visible, highlight, hasResonance) {
+  const color = catColor(cat);
+  const s = highlight ? 20 : 13;
+  const glow = highlight ? `0 0 16px ${color}, 0 0 6px #fff4` : `0 0 6px ${color}88`;
+  const ring = hasResonance && !highlight
+    ? `<div style="position:absolute;top:-5px;left:-5px;width:${s+10}px;height:${s+10}px;border-radius:50%;border:1.5px solid ${color};animation:pulse 2.4s ease-in-out infinite;"></div>`
+    : '';
+  return L.divIcon({
+    className: '',
+    html: `<div style="position:relative;width:${s}px;height:${s}px;opacity:${visible?1:0};transition:opacity 0.4s;">
+      ${ring}
+      <div style="width:${s}px;height:${s}px;border-radius:50%;background:${color};border:2px solid rgba(255,255,255,${highlight?0.6:0.2});box-shadow:${glow};"></div>
+    </div>`,
+    iconSize: [s, s], iconAnchor: [s/2, s/2],
+  });
+}
+
+mapped.forEach(ev => {
+  const hasRes = !!(resonanceMap[ev.id]?.length);
+  const marker = L.marker([ev.lat, ev.lng], {
+    icon: makeIcon(ev.category, false, false, hasRes), title: ev.title,
+  }).addTo(map);
+  marker.on('click', e => { e.originalEvent.stopPropagation(); openEventCard(ev); });
+  markers.set(ev.id, { marker, event: ev, visible: false, hasRes });
+});
+
+// Jitter only truly overlapping markers (same or nearly identical coords)
+(function jitterOverlaps() {
+  const THRESHOLD = 0.15; // ~15km — only nudge if basically identical
+  const NUDGE = 0.18;
+  const placed = [];
+  markers.forEach(m => {
+    let lat = m.event.lat, lng = m.event.lng;
+    let attempts = 0;
+    while (attempts < 8) {
+      const clash = placed.find(p =>
+        Math.abs(p.lat - lat) < THRESHOLD && Math.abs(p.lng - lng) < THRESHOLD
+      );
+      if (!clash) break;
+      const angle = attempts * 137.5 * Math.PI / 180;
+      const r = NUDGE * (1 + attempts * 0.2);
+      lat = m.event.lat + r * Math.sin(angle);
+      lng = m.event.lng + r * Math.cos(angle);
+      attempts++;
+    }
+    placed.push({ lat, lng });
+    m.marker.setLatLng([lat, lng]);
+  });
+})();
+
+// ── Timeline ───────────────────────────────────────────────────────────────
+const scrubber    = document.getElementById('scrubber');
+const yearDisplay = document.getElementById('year-display');
+const eventCount  = document.getElementById('event-count');
+scrubber.min = minYear; scrubber.max = maxYear; scrubber.value = minYear;
+
+const tickContainer = document.getElementById('tick-labels');
+for (let i = 0; i <= 8; i++) {
+  const y = Math.round(minYear + (i / 8) * (maxYear - minYear));
+  const s = document.createElement('span');
+  s.textContent = yearLabel(y);
+  tickContainer.appendChild(s);
+}
+
+function updateMap(year, animate) {
+  yearDisplay.textContent = yearLabel(year);
+  let vis = 0;
+  markers.forEach(m => {
+    const show = m.event.year <= year;
+    if (show) vis++;
+    if (show && !m.visible) {
+      m.marker.setIcon(makeIcon(m.event.category, true, false, m.hasRes));
+      m.visible = true;
+      if (animate) { showToast(m.event); setTimeout(() => m.marker.setIcon(makeIcon(m.event.category, true, false, m.hasRes)), 600); }
+    } else if (!show && m.visible) {
+      m.marker.setIcon(makeIcon(m.event.category, false, false, m.hasRes));
+      m.visible = false;
+    }
+  });
+  eventCount.textContent = `${vis} / ${mapped.length}`;
+}
+
+scrubber.addEventListener('input', () => updateMap(parseInt(scrubber.value), false));
+updateMap(minYear, false);
+
+let playing = false, timer = null;
+const playBtn = document.getElementById('play-btn');
+const speedSel = document.getElementById('speed-select');
+playBtn.addEventListener('click', () => {
+  playing = !playing;
+  playBtn.textContent = playing ? '⏸ Pause' : '▶ Play';
+  if (playing) {
+    if (parseInt(scrubber.value) >= maxYear) scrubber.value = minYear;
+    timer = setInterval(() => {
+      const step = Math.max(1, Math.round((maxYear - minYear) / 400));
+      const next = Math.min(maxYear, parseInt(scrubber.value) + step);
+      scrubber.value = next;
+      updateMap(next, true);
+      if (next >= maxYear) { playing = false; playBtn.textContent = '▶ Play'; clearInterval(timer); }
+    }, parseInt(speedSel.value));
+  } else clearInterval(timer);
+});
+
+// ── Clear ──────────────────────────────────────────────────────────────────
+let activeEvId = null;
+
+function clearAll() {
+  document.getElementById('event-card').classList.remove('visible');
+  document.getElementById('res-card').classList.remove('visible');
+  // Reset all highlighted markers
+  if (activeEvId) {
+    markers.forEach(m => {
+      if (m.visible) m.marker.setIcon(makeIcon(m.event.category, true, false, m.hasRes));
+    });
+    activeEvId = null;
+  }
+}
+map.on('click', clearAll);
+
+// ── Toast ──────────────────────────────────────────────────────────────────
+const toastEl = document.getElementById('toast-container');
+function showToast(ev) {
+  while (toastEl.children.length >= 3) toastEl.removeChild(toastEl.firstChild);
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.style.borderLeftColor = catColor(ev.category);
+  t.innerHTML = `<strong>${ev.title}${ev.title_local ? ` <span style="color:#7a6a9a">${ev.title_local}</span>` : ''}</strong>${ev.description.slice(0, 80)}…`;
+  t.addEventListener('click', () => openEventCard(ev));
+  toastEl.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function positionNear(lat, lng, w, h) {
+  const pt   = map.latLngToContainerPoint([lat, lng]);
+  const rect = document.getElementById('map').getBoundingClientRect();
+  const hh   = document.getElementById('header').offsetHeight;
+  const th   = document.getElementById('timeline-bar').offsetHeight;
+  const m    = 14;
+  let x = rect.left + pt.x + 16;
+  let y = rect.top  + pt.y - 40;
+  if (x + w > window.innerWidth - m) x = rect.left + pt.x - w - 16;
+  x = clamp(x, m, window.innerWidth  - w - m);
+  y = clamp(y, hh + m, window.innerHeight - th - h - m);
+  return { x, y };
+}
+
+function fillCard(titleEl, localEl, metaEl, imgEl, descEl, ev) {
+  titleEl.textContent = ev.title;
+  localEl.textContent = ev.title_local || '';
+  localEl.style.display = ev.title_local ? 'block' : 'none';
+  const wiki = ev.wiki_title ? ` <a href="https://en.wikipedia.org/wiki/${encodeURIComponent(ev.wiki_title)}" target="_blank" rel="noopener">↗</a>` : '';
+  metaEl.innerHTML = `${yearLabel(ev.year)} · ${ev.region} · ${ev.category}${wiki}`;
+  imgEl.style.display = 'none';
+  if (ev.wiki_title) {
+    fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(ev.wiki_title.replace(/ /g,'_'))}`)
+      .then(r => r.json())
+      .then(d => { const src = d?.thumbnail?.source; if (src) { imgEl.src = src; imgEl.style.display = 'block'; } })
+      .catch(() => {});
+  }
+  descEl.textContent = ev.description.length > 130 ? ev.description.slice(0, 127) + '…' : ev.description;
+}
+
+// ── Open event card ────────────────────────────────────────────────────────
+function openEventCard(ev) {
+  clearAll();
+  activeEvId = ev.id;
+
+  // Fill main card
+  fillCard(
+    document.getElementById('card-title'),
+    document.getElementById('card-local'),
+    document.getElementById('card-meta'),
+    document.getElementById('card-image'),
+    document.getElementById('card-desc'),
+    ev
+  );
+  document.getElementById('card-figures').innerHTML = (ev.figures || []).map(f => {
+    const initials = (f.name || '').split(/\s+/).map(w => w[0]).filter(Boolean).join('').slice(0, 2).toUpperCase() || '?';
+    const role = f.role ? ` <span class="fig-role">· ${f.role}</span>` : '';
+    return `<div class="fig-chip"><div class="fig-av">${initials}</div><span>${f.name || ''}${role}</span></div>`;
+  }).join('');
+
+  // Position near dot
+  if (ev.lat != null) {
+    const { x, y } = positionNear(ev.lat, ev.lng, 270, 300);
+    const card = document.getElementById('event-card');
+    card.style.left = x + 'px'; card.style.top = y + 'px';
+    card.style.right = 'auto'; card.style.bottom = 'auto';
+  }
+  document.getElementById('event-card').classList.add('visible');
+
+  // Highlight this dot
+  markers.get(ev.id)?.marker.setIcon(makeIcon(ev.category, true, true, false));
+
+  // Find first resonance (visible or not)
+  const connections = resonanceMap[ev.id] || [];
+  if (!connections.length) {
+    document.getElementById('res-card').classList.remove('visible');
+    return;
+  }
+
+  // Prefer a visible connection, fall back to any
+  const conn = connections.find(r => markers.get(r.other.id)?.visible) || connections[0];
+  const { other, reason } = conn;
+  const otherVisible = markers.get(other.id)?.visible;
+
+  // Highlight connected dot only if visible
+  if (otherVisible) {
+    markers.get(other.id)?.marker.setIcon(makeIcon(other.category, true, true, false));
+  }
+
+  // Fill resonance card
+  fillCard(
+    document.getElementById('res-card-title'),
+    document.getElementById('res-card-local'),
+    document.getElementById('res-card-meta'),
+    document.getElementById('res-card-img'),
+    document.getElementById('res-card-desc'),
+    other
+  );
+  document.getElementById('res-reason-text').textContent = reason || 'These events echo each other across history.';
+  // Set label to past/future echo and remove bottom note
+  const diff = other.year - ev.year;
+  const absDiff = Math.abs(diff);
+  const direction = diff > 0
+    ? `↓ Future Echo · ${absDiff} years later`
+    : `↑ Past Echo · ${absDiff} years earlier`;
+  document.getElementById('res-card-label').textContent = direction;
+  document.getElementById('res-card-note').style.display = 'none';
+  document.getElementById('res-card').classList.add('visible');
+}
+
+document.getElementById('card-close').addEventListener('click',     e => { e.stopPropagation(); clearAll(); });
+document.getElementById('res-card-close').addEventListener('click', e => { e.stopPropagation(); clearAll(); });
+
+// ── Legend ─────────────────────────────────────────────────────────────────
+const legend = document.getElementById('legend');
+Object.entries(CAT_COLOR).forEach(([cat, color]) => {
+  const d = document.createElement('div');
+  d.className = 'legend-item';
+  d.innerHTML = `<div class="legend-dot" style="background:${color}"></div><span>${cat.replace('_',' ')}</span>`;
+  legend.appendChild(d);
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,88 @@
+[
+  {
+    "id": "punic-wars",
+    "title": "The Punic Wars",
+    "year": -264,
+    "region": "Roman Republic / Carthage",
+    "description": "A series of three wars fought between Rome and Carthage for dominance of the western Mediterranean. Rome's eventual victory established it as the preeminent power in the region.",
+    "category": "war",
+    "figures": [
+      { "name": "Hannibal Barca", "role": "Carthaginian General", "portrait_url": null },
+      { "name": "Scipio Africanus", "role": "Roman General", "portrait_url": null }
+    ],
+    "resonances": ["mongol-conquests"]
+  },
+  {
+    "id": "julius-caesar-assassination",
+    "title": "Assassination of Julius Caesar",
+    "year": -44,
+    "region": "Roman Republic",
+    "description": "The murder of Julius Caesar by a group of senators marked the end of the Roman Republic and triggered a chain of civil wars that gave rise to the Roman Empire.",
+    "category": "revolution",
+    "figures": [
+      { "name": "Julius Caesar", "role": "Dictator of Rome", "portrait_url": null },
+      { "name": "Marcus Brutus", "role": "Senator and Conspirator", "portrait_url": null }
+    ],
+    "resonances": ["fall-of-western-rome"]
+  },
+  {
+    "id": "pax-romana",
+    "title": "Pax Romana",
+    "year": 27,
+    "region": "Roman Empire",
+    "description": "A period of relative peace and stability across the Roman Empire lasting roughly 200 years, enabling trade, infrastructure, and cultural flourishing across Europe and the Mediterranean.",
+    "category": "cultural_peak",
+    "figures": [
+      { "name": "Augustus", "role": "First Roman Emperor", "portrait_url": null }
+    ],
+    "resonances": ["italian-renaissance"]
+  },
+  {
+    "id": "fall-of-western-rome",
+    "title": "Fall of the Western Roman Empire",
+    "year": 476,
+    "region": "Western Roman Empire",
+    "description": "The deposition of Romulus Augustulus by Odoacer marked the conventional end of the Western Roman Empire, fragmenting Europe into successor kingdoms.",
+    "category": "collapse",
+    "figures": [
+      { "name": "Romulus Augustulus", "role": "Last Western Roman Emperor", "portrait_url": null },
+      { "name": "Odoacer", "role": "Germanic Chieftain", "portrait_url": null }
+    ],
+    "resonances": ["julius-caesar-assassination", "mongol-conquests"]
+  },
+  {
+    "id": "mongol-conquests",
+    "title": "Mongol Conquests",
+    "year": 1206,
+    "region": "Central Asia / Eurasia",
+    "description": "Under Genghis Khan, the Mongols built the largest contiguous land empire in history, reshaping trade routes, spreading plague, and toppling established civilizations from China to Persia.",
+    "category": "war",
+    "figures": [
+      { "name": "Genghis Khan", "role": "Founder of the Mongol Empire", "portrait_url": null }
+    ],
+    "resonances": ["punic-wars", "fall-of-western-rome"]
+  },
+  {
+    "id": "black-death",
+    "title": "The Black Death",
+    "year": 1347,
+    "region": "Europe / Middle East",
+    "description": "The bubonic plague killed an estimated one-third of Europe's population, destabilizing feudal structures, accelerating labor reforms, and indirectly fueling the conditions for the Renaissance.",
+    "category": "collapse",
+    "figures": [],
+    "resonances": ["italian-renaissance"]
+  },
+  {
+    "id": "italian-renaissance",
+    "title": "The Italian Renaissance",
+    "year": 1400,
+    "region": "Italian City-States",
+    "description": "A cultural and intellectual rebirth centered in Florence, Venice, and Rome. Humanism, art, and science flourished, drawing inspiration from classical antiquity and reshaping European civilization.",
+    "category": "cultural_peak",
+    "figures": [
+      { "name": "Leonardo da Vinci", "role": "Artist and Polymath", "portrait_url": null },
+      { "name": "Lorenzo de' Medici", "role": "Patron of the Arts", "portrait_url": null }
+    ],
+    "resonances": ["pax-romana", "black-death"]
+  }
+]
