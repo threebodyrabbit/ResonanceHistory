@@ -24,7 +24,7 @@ An open source, AI-powered interactive map that surfaces the hidden structural p
 **Requirements:** Python 3.10+, a [Gemini API key](https://ai.google.dev/gemini-api/docs/api-key)
 
 ```bash
-git clone https://github.com/yourusername/ResonanceHistory.git
+git clone https://github.com/threebodyrabbit/ResonanceHistory.git
 cd ResonanceHistory
 
 # Create and activate virtual environment
