@@ -1,5 +1,7 @@
 # ResonanceHistory
 
+🌐 **Live Demo:** https://threebodyrabbit.github.io/ResonanceHistory/
+
 History doesn't just happen linearly. It echoes. The same dynamics repeat across civilizations that had no contact with each other: imperial overreach leading to currency debasement and peasant revolt, plague reshaping labor markets and triggering cultural renaissances, ideological ruptures following economic collapse. ResonanceHistory makes these patterns visible.
 
 An open source, AI-powered interactive map that surfaces the structural patterns history keeps repeating, across civilizations and centuries.
