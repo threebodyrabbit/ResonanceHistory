@@ -14,9 +14,21 @@ An open source, AI-powered interactive map that surfaces the structural patterns
 
 ## What It Does
 
-400+ historically accurate events across 50+ regions, from 600 BCE to 2024. Dynasty changes, wars, pandemics, famines, natural disasters, economic crises, cultural peaks. An interactive world map with timeline playback. And when you click an event, it surfaces its structural echo in another civilization, with an explanation of the repeating pattern underneath, not just "both were revolutions" but why the same economic spiral or plague dynamic played out identically in civilizations that never met.
+600+ historically accurate events across 65+ regions and countries, from 600 BCE to 2024. Dynasty changes, wars, pandemics, famines, natural disasters, economic crises, cultural peaks — covering US, China, Britain, France, Germany, Russia, India, Japan, Iran, Egypt, Brazil, and many more.
 
-Bilingual display for East Asian events. Fully self-contained HTML output, no server required.
+An interactive world map with timeline playback. Pulsing dots mark events with resonance connections. Click one to see its structural echo in another civilization, with an explanation of the repeating pattern — not just "both were revolutions" but why the same economic spiral or plague dynamic played out identically in civilizations that never met.
+
+Switch between English and Chinese (简体中文) with one click. Fully self-contained HTML output, no server required.
+
+## Try It Without Running
+
+A pre-generated visualization is included in `docs/index.html`. Just open it:
+
+```bash
+open docs/index.html
+```
+
+Or download it directly from the repo and double-click it in Finder.
 
 ## Setup
 
@@ -50,14 +62,16 @@ python -m resonancehistory \
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--all-regions` | | Generate all 50+ built-in regions |
+| `--all-regions` | | Generate all 65+ built-in regions |
 | `--region` / `--era` | | Custom region + era pair, repeatable |
 | `--output` | `output.html` | Output file path |
 | `--open` | off | Open in browser after generation |
 
 ## How It Works
 
-The LLM agent generates events for each region in parallel. Results are cached locally in `~/.cache/resonancehistory/` so repeat runs are instant. The visualizer renders a self-contained HTML file using Leaflet.js. Pulsing dots indicate events with resonance connections. Click one to see its echo in another civilization and the structural explanation of why.
+The LLM agent (Gemini 2.5 Flash) generates events for each region in parallel with up to 8 concurrent requests. Results are cached locally in `~/.cache/resonancehistory/` so repeat runs are instant. The visualizer renders a self-contained HTML file using Leaflet.js and D3.js.
+
+Each event includes bilingual content (English + Chinese), Wikipedia links, and resonance connections with deep structural explanations of why two distant civilizations repeated the same pattern.
 
 ## Python API
 
@@ -65,7 +79,7 @@ The LLM agent generates events for each region in parallel. Results are cached l
 from resonancehistory.agent.historian import Historian
 from resonancehistory.render.visualizer import Visualizer
 
-historian = Historian()
+historian = Historian()  # uses gemini-2.5-flash by default
 events = historian.generate_batch([
     ("Roman Empire", "500 BCE - 476 CE", 16),
     ("Han Dynasty",  "206 BCE - 220 CE", 12),

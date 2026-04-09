@@ -75,7 +75,8 @@
     @keyframes fadeInOut { 0%{opacity:0;transform:translateX(-8px)} 10%{opacity:1;transform:translateX(0)} 75%{opacity:1} 100%{opacity:0} }
     @keyframes pulse { 0%,100%{transform:scale(1);opacity:0.5} 50%{transform:scale(1.5);opacity:0.15} }
 
-    /* ── Legend ── */
+    #lang-btn { margin-left: 12px; background: #1a1530; border: 1px solid #3a2a5a; color: #9a8aaa; border-radius: 4px; padding: 3px 10px; cursor: pointer; font-size: 0.78rem; }
+    #lang-btn:hover { border-color: #c9a96e; color: #c9a96e; }
     #legend { position: fixed; bottom: 110px; left: 16px; background: rgba(10,8,22,0.85); border: 1px solid #1e1a2e; border-radius: 7px; padding: 8px 12px; z-index: 1000; font-size: 0.68rem; color: #776677; }
     .legend-item { display: flex; align-items: center; gap: 7px; margin-bottom: 3px; }
     .legend-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
@@ -86,6 +87,7 @@
 <div id="header">
   <h1>ResonanceHistory <span>历史的回响</span></h1>
   <span id="header-hint">click a dot to explore · connected events reveal historical echoes</span>
+  <button id="lang-btn">中文</button>
   <div id="year-display">—</div>
 </div>
 
@@ -153,6 +155,77 @@ const catColor  = c => CAT_COLOR[c] || '#888';
 const yearLabel = y => y < 0 ? `${Math.abs(y)} BCE` : `${y} CE`;
 const clamp     = (v, lo, hi) => Math.max(lo, Math.min(v, hi));
 
+// ── Language ───────────────────────────────────────────────────────────────
+let lang = 'en';
+
+const UI = {
+  en: {
+    hint:        'click a dot to explore · connected events reveal historical echoes',
+    play:        '▶ Play',
+    pause:       '⏸ Pause',
+    fast:        'Fast',
+    normal:      'Normal',
+    slow:        'Slow',
+    echoLabel:   v => v,   // already set dynamically
+    whyResonate: 'Why they resonate',
+    langBtn:     '中文',
+  },
+  zh: {
+    hint:        '点击圆点探索 · 连接的事件揭示历史回响',
+    play:        '▶ 播放',
+    pause:       '⏸ 暂停',
+    fast:        '快速',
+    normal:      '正常',
+    slow:        '慢速',
+    echoLabel:   v => v,
+    whyResonate: '为何共鸣',
+    langBtn:     'EN',
+  },
+};
+
+const CAT_ZH = {
+  collapse:      '崩溃',
+  revolution:    '革命',
+  cultural_peak: '文化巅峰',
+  war:           '战争',
+  discovery:     '发现',
+  migration:     '迁徙',
+  pandemic:      '瘟疫',
+  disaster:      '灾难',
+};
+
+function t(key) { return UI[lang][key] || UI.en[key]; }
+
+function applyLang() {
+  document.getElementById('header-hint').textContent = t('hint');
+  document.getElementById('lang-btn').textContent = t('langBtn');
+  document.getElementById('res-reason-label').textContent = t('whyResonate');  const pb = document.getElementById('play-btn');
+  if (playing) pb.textContent = t('pause'); else pb.textContent = t('play');
+  const ss = document.getElementById('speed-select');
+  ss.options[0].text = t('fast');
+  ss.options[1].text = t('normal');
+  ss.options[2].text = t('slow');
+  // Rebuild legend with translated categories
+  const legend = document.getElementById('legend');
+  legend.innerHTML = '';
+  Object.entries(CAT_COLOR).forEach(([cat, color]) => {
+    const d = document.createElement('div');
+    d.className = 'legend-item';
+    const label = lang === 'zh' ? (CAT_ZH[cat] || cat) : cat.replace('_', ' ');
+    d.innerHTML = `<div class="legend-dot" style="background:${color}"></div><span>${label}</span>`;
+    legend.appendChild(d);
+  });
+}
+
+document.getElementById('lang-btn').addEventListener('click', () => {
+  lang = lang === 'en' ? 'zh' : 'en';
+  applyLang();
+  // Re-render open cards if any
+  if (document.getElementById('event-card').classList.contains('visible') && activeEvId) {
+    openEventCard(idMap[activeEvId]);
+  }
+});
+
 const mapped  = EVENTS.filter(e => e.lat != null && e.lng != null);
 const idMap   = Object.fromEntries(mapped.map(e => [e.id, e]));
 const years   = mapped.map(e => e.year);
@@ -171,14 +244,14 @@ mapped.forEach(ev => {
   (ev.resonances || []).forEach(rid => {
     const other = idMap[rid];
     if (!other?.lat) return;
-    const reason = ev.resonance_reasons?.[rid] || other.resonance_reasons?.[ev.id] || null;
+    const reason    = ev.resonance_reasons?.[rid]    || other.resonance_reasons?.[ev.id]    || null;
+    const reason_zh = ev.resonance_reasons_zh?.[rid] || other.resonance_reasons_zh?.[ev.id] || null;
     if (!resonanceMap[ev.id]) resonanceMap[ev.id] = [];
     if (!resonanceMap[rid])   resonanceMap[rid]   = [];
-    // avoid duplicates
     if (!resonanceMap[ev.id].find(r => r.other.id === rid))
-      resonanceMap[ev.id].push({ other, reason });
+      resonanceMap[ev.id].push({ other, reason, reason_zh });
     if (!resonanceMap[rid].find(r => r.other.id === ev.id))
-      resonanceMap[rid].push({ other: ev, reason });
+      resonanceMap[rid].push({ other: ev, reason, reason_zh });
   });
 });
 
@@ -311,7 +384,9 @@ function showToast(ev) {
   const t = document.createElement('div');
   t.className = 'toast';
   t.style.borderLeftColor = catColor(ev.category);
-  t.innerHTML = `<strong>${ev.title}${ev.title_local ? ` <span style="color:#7a6a9a">${ev.title_local}</span>` : ''}</strong>${ev.description.slice(0, 80)}…`;
+  const toastTitle = lang === 'zh' && ev.title_local ? ev.title_local : ev.title;
+  const toastDesc  = lang === 'zh' && ev.description_local ? ev.description_local : ev.description;
+  t.innerHTML = `<strong>${toastTitle}</strong>${toastDesc.slice(0, 80)}…`;
   t.addEventListener('click', () => openEventCard(ev));
   toastEl.appendChild(t);
   setTimeout(() => t.remove(), 4000);
@@ -333,11 +408,17 @@ function positionNear(lat, lng, w, h) {
 }
 
 function fillCard(titleEl, localEl, metaEl, imgEl, descEl, ev) {
-  titleEl.textContent = ev.title;
-  localEl.textContent = ev.title_local || '';
-  localEl.style.display = ev.title_local ? 'block' : 'none';
+  const zhTitle = lang === 'zh' ? (ev.title_zh || ev.title_local || ev.title) : ev.title;
+  const subTitle = lang === 'zh' ? ev.title : (ev.title_local || '');
+  titleEl.textContent = zhTitle;
+  localEl.textContent = subTitle;
+  localEl.style.display = subTitle ? 'block' : 'none';
+  const yl = lang === 'zh'
+    ? (ev.year < 0 ? `公元前${Math.abs(ev.year)}年` : `公元${ev.year}年`)
+    : yearLabel(ev.year);
+  const catLabel = lang === 'zh' ? (CAT_ZH[ev.category] || ev.category) : ev.category;
   const wiki = ev.wiki_title ? ` <a href="https://en.wikipedia.org/wiki/${encodeURIComponent(ev.wiki_title)}" target="_blank" rel="noopener">↗</a>` : '';
-  metaEl.innerHTML = `${yearLabel(ev.year)} · ${ev.region} · ${ev.category}${wiki}`;
+  metaEl.innerHTML = `${yl} · ${ev.region} · ${catLabel}${wiki}`;
   imgEl.style.display = 'none';
   if (ev.wiki_title) {
     fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(ev.wiki_title.replace(/ /g,'_'))}`)
@@ -345,7 +426,10 @@ function fillCard(titleEl, localEl, metaEl, imgEl, descEl, ev) {
       .then(d => { const src = d?.thumbnail?.source; if (src) { imgEl.src = src; imgEl.style.display = 'block'; } })
       .catch(() => {});
   }
-  descEl.textContent = ev.description.length > 130 ? ev.description.slice(0, 127) + '…' : ev.description;
+  const desc = lang === 'zh'
+    ? (ev.description_zh || ev.description_local || ev.description)
+    : ev.description;
+  descEl.textContent = desc.length > 130 ? desc.slice(0, 127) + '…' : desc;
 }
 
 // ── Open event card ────────────────────────────────────────────────────────
@@ -389,7 +473,7 @@ function openEventCard(ev) {
 
   // Prefer a visible connection, fall back to any
   const conn = connections.find(r => markers.get(r.other.id)?.visible) || connections[0];
-  const { other, reason } = conn;
+  const { other, reason, reason_zh } = conn;
   const otherVisible = markers.get(other.id)?.visible;
 
   // Highlight connected dot only if visible
@@ -406,13 +490,14 @@ function openEventCard(ev) {
     document.getElementById('res-card-desc'),
     other
   );
-  document.getElementById('res-reason-text').textContent = reason || 'These events echo each other across history.';
+  document.getElementById('res-reason-text').textContent =
+    (lang === 'zh' && reason_zh) ? reason_zh : (reason || 'These events echo each other across history.');
   // Set label to past/future echo and remove bottom note
   const diff = other.year - ev.year;
   const absDiff = Math.abs(diff);
-  const direction = diff > 0
-    ? `↓ Future Echo · ${absDiff} years later`
-    : `↑ Past Echo · ${absDiff} years earlier`;
+  const direction = lang === 'zh'
+    ? (diff > 0 ? `↓ 未来回响 · ${absDiff}年后` : `↑ 历史回响 · ${absDiff}年前`)
+    : (diff > 0 ? `↓ Future Echo · ${absDiff} years later` : `↑ Past Echo · ${absDiff} years earlier`);
   document.getElementById('res-card-label').textContent = direction;
   document.getElementById('res-card-note').style.display = 'none';
   document.getElementById('res-card').classList.add('visible');
@@ -421,14 +506,8 @@ function openEventCard(ev) {
 document.getElementById('card-close').addEventListener('click',     e => { e.stopPropagation(); clearAll(); });
 document.getElementById('res-card-close').addEventListener('click', e => { e.stopPropagation(); clearAll(); });
 
-// ── Legend ─────────────────────────────────────────────────────────────────
-const legend = document.getElementById('legend');
-Object.entries(CAT_COLOR).forEach(([cat, color]) => {
-  const d = document.createElement('div');
-  d.className = 'legend-item';
-  d.innerHTML = `<div class="legend-dot" style="background:${color}"></div><span>${cat.replace('_',' ')}</span>`;
-  legend.appendChild(d);
-});
+// ── Legend built via applyLang() ──────────────────────────────────────────
+applyLang();
 </script>
 </body>
 </html>

@@ -18,10 +18,13 @@ class HistoricalEvent(BaseModel):
     confidence: Literal["high", "medium", "speculative"] = "high"
     figures: list[KeyFigure] = Field(default_factory=list)
     resonances: list[str] = Field(default_factory=list)
-    resonance_reasons: dict[str, str] = Field(default_factory=dict)  # id → reason
+    resonance_reasons: dict[str, str] = Field(default_factory=dict)
+    resonance_reasons_zh: dict[str, str] = Field(default_factory=dict)
     lat: Optional[float] = None
     lng: Optional[float] = None
     title_local: Optional[str] = None
     description_local: Optional[str] = None
     wiki_title: Optional[str] = None
-    image_url: Optional[str] = None  # base64 data URI from Wikipedia
+    image_url: Optional[str] = None
+    title_zh: Optional[str] = None
+    description_zh: Optional[str] = None

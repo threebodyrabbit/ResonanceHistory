@@ -62,14 +62,16 @@ def _parse_events(data: list[dict], region: str) -> list[HistoricalEvent]:
     for e in data:
         e.setdefault("region", region)
         e.setdefault("title", e.get("id", "unknown").replace("-", " ").title())
+        e.setdefault("description", "")
         if "figures" in e:
             e["figures"] = _normalize_figures(e["figures"])
-        # Gemini sometimes returns {} instead of [] for empty collections
+        # Normalise any field that should be a list or dict but isn't
         for field in ("resonances", "figures"):
-            if isinstance(e.get(field), dict):
+            if not isinstance(e.get(field), list):
                 e[field] = []
-        if isinstance(e.get("resonance_reasons"), list):
-            e["resonance_reasons"] = {}
+        for field in ("resonance_reasons", "resonance_reasons_zh"):
+            if not isinstance(e.get(field), dict):
+                e[field] = {}
         try:
             events.append(HistoricalEvent(**e))
         except Exception as ex:
@@ -89,12 +91,14 @@ STRICT RULES — follow these exactly:
 6. "lat" and "lng" must be the precise coordinates of the SPECIFIC city, site, or battlefield where the event occurred. Examples: An Lushan Rebellion → Beijing (39.9042, 116.4074), Battle of Thermopylae → Thermopylae (38.7953, 22.5337). Never use country or region centroids.
 7. "resonances" must only reference "id" values of OTHER events in the same response array.
    Only include resonances that are genuinely striking cross-civilizational echoes — limit to 1 resonance per event maximum, only for high-confidence events.
-   "resonance_reasons" must be an object mapping each resonance id to a deep, analytical 1-2 sentence explanation of the STRUCTURAL PATTERN that connects these two events — not surface similarity, but the underlying historical dynamic. Focus on how economic collapse, imperial overreach, peasant revolt, plague, climate shock, or ideological rupture created the same cascading pattern in different civilizations that had no contact with each other. Example: "Both empires collapsed not from external conquest alone, but from the same internal spiral: currency debasement funding endless frontier wars, which triggered tax revolts among peasants, which starved the military of recruits, accelerating the very collapse the taxes were meant to prevent." Avoid generic statements like "both were revolutions" or "both marked the rise of new powers."
+   "resonance_reasons" must be an object mapping each resonance id to a deep, analytical 1-2 sentence explanation in ENGLISH of the STRUCTURAL PATTERN that connects these two events — not surface similarity, but the underlying historical dynamic. Focus on how economic collapse, imperial overreach, peasant revolt, plague, climate shock, or ideological rupture created the same cascading pattern in different civilizations that had no contact with each other. Example: "Both empires collapsed not from external conquest alone, but from the same internal spiral: currency debasement funding endless frontier wars, which triggered tax revolts among peasants, which starved the military of recruits, accelerating the very collapse the taxes were meant to prevent." Avoid generic statements like "both were revolutions" or "both marked the rise of new powers."
+   "resonance_reasons_zh" must be the same object but with the explanation translated into Simplified Chinese.
 8. "id" must be a lowercase hyphenated slug, unique within the array.
 9. "category" must be one of: collapse, revolution, cultural_peak, war, discovery, migration, pandemic, disaster.
-10. For East Asian regions (China, Japan, Korea, Vietnam, Mongolia), you MUST also populate:
-    - "title_local": the event title in the region's native script
-    - "description_local": a 1-2 sentence description in the native language/script.
+10. For East Asian regions (China, Japan, Korea, Vietnam, Mongolia), populate "title_local" and "description_local" in the region's native script.
+    For ALL events regardless of region, also populate:
+    - "title_zh": the event title translated into Simplified Chinese
+    - "description_zh": a 1-2 sentence description in Simplified Chinese
     For all other regions, set "title_local" and "description_local" to null.
 11. "wiki_title" must be the exact English Wikipedia article title for this event. If no dedicated article exists, set to null.
 12. Include major dynasty changes, pandemics, famines, natural disasters, economic crises, and social upheavals — not just wars and political events.
@@ -159,7 +163,21 @@ class Historian:
     async def _batch_async(
         self, requests: list[tuple[str, str, int]]
     ) -> list[HistoricalEvent]:
-        tasks = [self._call_gemini_async(r, e, c) for r, e, c in requests]
+        sem = asyncio.Semaphore(8)  # max 8 concurrent requests
+
+        async def bounded(r, e, c):
+            async with sem:
+                for attempt in range(3):
+                    try:
+                        return await self._call_gemini_async(r, e, c)
+                    except Exception as ex:
+                        if attempt == 2:
+                            raise
+                        wait = 5 * (attempt + 1)
+                        print(f"[retry {attempt+1}] {r} — {ex.__class__.__name__}, waiting {wait}s...")
+                        await asyncio.sleep(wait)
+
+        tasks = [bounded(r, e, c) for r, e, c in requests]
         batches = await asyncio.gather(*tasks)
         events = []
         for (region, era, count), data in zip(requests, batches):
