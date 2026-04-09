@@ -17,6 +17,7 @@ def main():
                         help="Events per region (default: 8; use fewer when running all regions)")
     parser.add_argument("--output", default="output.html", help="Output HTML file path")
     parser.add_argument("--open", action="store_true", help="Open the output in the browser after generation")
+    parser.add_argument("--transitions", action="store_true", help="Also generate a transition pattern graph")
     args = parser.parse_args()
 
     if args.all_regions:
@@ -39,7 +40,16 @@ def main():
     visualizer = Visualizer()
     visualizer.render(events, output_path=args.output)
     print(f"Visualization saved to {args.output}")
-    if args.open:
+
+    if args.transitions:
+        from resonancehistory.render.graph_renderer import render_transitions
+        trans_path = args.output.replace('.html', '_transitions.html')
+        render_transitions(events, output_path=trans_path)
+        if args.open:
+            import webbrowser, pathlib
+            webbrowser.open(pathlib.Path(trans_path).resolve().as_uri())
+
+    if args.open and not args.transitions:
         import webbrowser, pathlib
         webbrowser.open(pathlib.Path(args.output).resolve().as_uri())
 
