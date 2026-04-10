@@ -85,6 +85,11 @@
 <body>
 
 <div id="header">
+  <nav style="display:flex;gap:0;margin-right:12px;">
+    <a href="world.html" style="padding:4px 12px;color:#c9a96e;text-decoration:none;font-size:0.75rem;border-bottom:2px solid #c9a96e;">Map</a>
+    <a href="world_transitions.html" style="padding:4px 12px;color:#665566;text-decoration:none;font-size:0.75rem;">Transitions</a>
+    <a href="world_compare.html" style="padding:4px 12px;color:#665566;text-decoration:none;font-size:0.75rem;">Compare</a>
+  </nav>
   <h1>ResonanceHistory <span>历史的回响</span></h1>
   <span id="header-hint">click a dot to explore · connected events reveal historical echoes</span>
   <button id="lang-btn">中文</button>
@@ -150,13 +155,21 @@ const CAT_COLOR = {
   migration:     '#a070d0',
   pandemic:      '#d0a020',
   disaster:      '#a06030',
+  technology:    '#40b0d0',
+  diplomacy:     '#6090a0',
+  economic_crisis:'#d06040',
+  economic_boom: '#60c060',
+  reform:        '#a0a0e0',
+  independence:  '#e0a050',
+  civil_war:     '#d04080',
+  colonization:  '#8a6040',
 };
 const catColor  = c => CAT_COLOR[c] || '#888';
 const yearLabel = y => y < 0 ? `${Math.abs(y)} BCE` : `${y} CE`;
 const clamp     = (v, lo, hi) => Math.max(lo, Math.min(v, hi));
 
 // ── Language ───────────────────────────────────────────────────────────────
-let lang = 'en';
+let lang = localStorage.getItem('rh-lang') || 'en';
 
 const UI = {
   en: {
@@ -192,6 +205,14 @@ const CAT_ZH = {
   migration:     '迁徙',
   pandemic:      '瘟疫',
   disaster:      '灾难',
+  technology:    '科技突破',
+  diplomacy:     '外交',
+  economic_crisis:'经济危机',
+  economic_boom: '经济繁荣',
+  reform:        '改革',
+  independence:  '独立',
+  civil_war:     '内战',
+  colonization:  '殖民',
 };
 
 function t(key) { return UI[lang][key] || UI.en[key]; }
@@ -219,6 +240,7 @@ function applyLang() {
 
 document.getElementById('lang-btn').addEventListener('click', () => {
   lang = lang === 'en' ? 'zh' : 'en';
+  localStorage.setItem('rh-lang', lang);
   applyLang();
   // Re-render open cards if any
   if (document.getElementById('event-card').classList.contains('visible') && activeEvId) {

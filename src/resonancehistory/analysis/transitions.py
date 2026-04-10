@@ -13,6 +13,8 @@ from resonancehistory.data.schema import HistoricalEvent
 CATEGORIES = [
     "war", "collapse", "revolution", "cultural_peak",
     "discovery", "migration", "pandemic", "disaster",
+    "technology", "diplomacy", "economic_crisis", "economic_boom",
+    "reform", "independence", "civil_war", "colonization",
 ]
 
 

@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>ResonanceHistory — Compare Civilizations</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0d0d1a; color: #e8e0d0; font-family: Georgia, serif; min-height: 100vh; }
+
+    /* Nav */
+    nav { display: flex; gap: 0; border-bottom: 1px solid #1e1a2e; background: #0d0d1a; position: sticky; top: 0; z-index: 100; }
+    nav a { padding: 10px 20px; color: #665566; text-decoration: none; font-size: 0.82rem; border-bottom: 2px solid transparent; }
+    nav a:hover { color: #c9a96e; }
+    nav a.active { color: #c9a96e; border-bottom-color: #c9a96e; }
+    nav .spacer { flex: 1; }
+    #lang-btn { background: none; border: 1px solid #3a2a5a; color: #9a8aaa; border-radius: 4px; padding: 3px 10px; cursor: pointer; font-size: 0.75rem; margin: 6px 16px; }
+    #lang-btn:hover { border-color: #c9a96e; color: #c9a96e; }
+
+    .content { padding: 24px; max-width: 1100px; margin: 0 auto; }
+    h1 { font-size: 1.15rem; color: #c9a96e; margin-bottom: 4px; }
+    .subtitle { font-size: 0.76rem; color: #554466; margin-bottom: 24px; }
+
+    /* Prediction */
+    .prediction {
+      background: #16102a; border: 1px solid #3a2a6a; border-radius: 8px;
+      padding: 14px 18px; margin-bottom: 24px;
+    }
+    .prediction h2 { font-size: 0.82rem; color: #c9a96e; margin-bottom: 12px; }
+    .pred-country { margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid #1a1530; }
+    .pred-country:last-child { border-bottom: none; }
+    .pred-header { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+    .pred-name { font-size: 0.82rem; color: #e8e0d0; }
+    .pred-acc { font-size: 0.7rem; padding: 2px 8px; border-radius: 10px; }
+    .pred-acc-good { background: #1a3a1a; color: #6c6; }
+    .pred-acc-mid  { background: #3a2a10; color: #ca8; }
+    .pred-acc-low  { background: #3a1a1a; color: #c66; }
+    .pred-latest { font-size: 0.7rem; color: #887788; margin-bottom: 6px; }
+    .pred-next { display: flex; gap: 8px; flex-wrap: wrap; }
+    .pred-chip { display: flex; align-items: center; gap: 5px; background: #1a1530; border: 1px solid #2a1a3a; border-radius: 6px; padding: 4px 10px; font-size: 0.72rem; }
+    .pred-chip-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+    .pred-chip-cat { color: #c9a96e; }
+    .pred-chip-pct { color: #554466; font-size: 0.65rem; }
+
+    /* Pair tabs */
+    .pair-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 20px; }
+    .ptab { background: #1a1530; border: 1px solid #2a1a3a; border-radius: 4px; padding: 5px 12px; font-size: 0.73rem; color: #9a8aaa; cursor: pointer; }
+    .ptab.active { border-color: #c9a96e; color: #c9a96e; }
+
+    /* Similarity score */
+    .sim-bar-wrap { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+    .sim-label { font-size: 0.72rem; color: #665566; }
+    .sim-bar { flex: 1; height: 8px; background: #1a1530; border-radius: 4px; overflow: hidden; max-width: 300px; }
+    .sim-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, #5090e0, #c9a96e); }
+    .sim-pct { font-size: 1.1rem; color: #c9a96e; font-variant-numeric: tabular-nums; }
+
+    /* Aligned pairs */
+    .aligned-section { margin-bottom: 24px; }
+    .aligned-section h2 { font-size: 0.82rem; color: #c9a96e; margin-bottom: 12px; }
+    .aligned-pair {
+      display: grid; grid-template-columns: 1fr 40px 1fr; gap: 0; align-items: start;
+      margin-bottom: 12px; padding: 10px 0; border-bottom: 1px solid #1a1530;
+    }
+    .aligned-pair:last-child { border-bottom: none; }
+    .ap-event { font-size: 0.75rem; }
+    .ap-title { color: #c9a96e; margin-bottom: 2px; }
+    .ap-year { font-size: 0.65rem; color: #554466; }
+    .ap-desc { font-size: 0.68rem; color: #887788; margin-top: 3px; line-height: 1.4; }
+    .ap-cat { display: flex; align-items: center; justify-content: center; flex-direction: column; }
+    .ap-dot { width: 12px; height: 12px; border-radius: 50%; }
+    .ap-cat-label { font-size: 0.58rem; color: #554466; margin-top: 3px; text-align: center; }
+    .ap-left { text-align: right; padding-right: 12px; }
+    .ap-right { text-align: left; padding-left: 12px; }
+
+    /* Side-by-side timelines */
+    .side-section { margin-top: 28px; }
+    .side-section h2 { font-size: 0.82rem; color: #c9a96e; margin-bottom: 12px; }
+    .side-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .side-col h3 { font-size: 0.75rem; color: #887788; margin-bottom: 8px; }
+    .side-ev { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+    .side-year { font-size: 0.58rem; color: #443355; width: 50px; text-align: right; flex-shrink: 0; }
+    .side-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+    .side-title { font-size: 0.68rem; color: #9a8aaa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="world.html">Map</a>
+  <a href="world_transitions.html">Transitions</a>
+  <a href="world_compare.html" class="active">Compare</a>
+  <div class="spacer"></div>
+  <button id="lang-btn">中文</button>
+</nav>
+
+<div class="content">
+  <h1 id="page-title">Compare Civilizations</h1>
+  <p class="subtitle" id="page-subtitle">Side-by-side structural alignment — where are they on the same trajectory?</p>
+
+  <div class="pair-tabs" id="pair-tabs"></div>
+  <div class="sim-bar-wrap">
+    <span class="sim-label" id="sim-label">Structural similarity:</span>
+    <div class="sim-bar"><div class="sim-fill" id="sim-fill"></div></div>
+    <span class="sim-pct" id="sim-pct">—</span>
+  </div>
+
+  <div class="prediction">
+    <h2 id="pred-title">Transition Predictions — Backtest & Forecast</h2>
+    <div id="pred-list"></div>
+  </div>
+
+  <div class="aligned-section">
+    <h2 id="aligned-title">Aligned Event Pairs</h2>
+    <div id="aligned-list"></div>
+  </div>
+
+  <div class="side-section">
+    <h2 id="side-title">Full Timelines</h2>
+    <div class="side-grid">
+      <div class="side-col"><h3 id="side-label-a"></h3><div id="side-a"></div></div>
+      <div class="side-col"><h3 id="side-label-b"></h3><div id="side-b"></div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const DATA = {{ data_json }};
+const PREDICTIONS = {{ predictions_json }};
+
+const CAT_COLOR = {
+  collapse:'#e05050', revolution:'#e08030', cultural_peak:'#50c0a0',
+  war:'#c04060', discovery:'#5090e0', migration:'#a070d0',
+  pandemic:'#d0a020', disaster:'#a06030',
+  technology:'#40b0d0', diplomacy:'#6090a0', economic_crisis:'#d06040',
+  economic_boom:'#60c060', reform:'#a0a0e0', independence:'#e0a050',
+  civil_war:'#d04080', colonization:'#8a6040',
+};
+const cc = c => CAT_COLOR[c] || '#888';
+const CAT_ZH = { collapse:'崩溃', revolution:'革命', cultural_peak:'文化巅峰', war:'战争', discovery:'发现', migration:'迁徙', pandemic:'瘟疫', disaster:'灾难', technology:'科技突破', diplomacy:'外交', economic_crisis:'经济危机', economic_boom:'经济繁荣', reform:'改革', independence:'独立', civil_war:'内战', colonization:'殖民' };
+
+let lang = localStorage.getItem('rh-lang') || 'en';
+let activeIdx = 0;
+
+const catLabel = c => lang === 'zh' ? (CAT_ZH[c] || c) : c.replace('_',' ');
+const yl = y => y < 0 ? `${Math.abs(y)} BCE` : `${y} CE`;
+
+function render() {
+  const d = DATA[activeIdx];
+
+  // Tabs
+  const tabs = document.getElementById('pair-tabs');
+  tabs.innerHTML = '';
+  DATA.forEach((p, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'ptab' + (i === activeIdx ? ' active' : '');
+    btn.textContent = `${p.label_a} vs ${p.label_b}`;
+    btn.addEventListener('click', () => { activeIdx = i; render(); });
+    tabs.appendChild(btn);
+  });
+
+  // Similarity
+  document.getElementById('sim-fill').style.width = (d.similarity * 100) + '%';
+  document.getElementById('sim-pct').textContent = (d.similarity * 100).toFixed(1) + '%';
+
+  // Labels
+  document.getElementById('side-label-a').textContent = d.label_a;
+  document.getElementById('side-label-b').textContent = d.label_b;
+
+  // Predictions
+  document.getElementById('pred-title').textContent = lang === 'zh' ? '转变预测 — 回测与预报' : 'Transition Predictions — Backtest & Forecast';
+  const predList = document.getElementById('pred-list');
+  predList.innerHTML = '';
+  Object.entries(PREDICTIONS).forEach(([country, p]) => {
+    const accPct = (p.accuracy * 100).toFixed(1);
+    const accClass = p.accuracy >= 0.4 ? 'pred-acc-good' : p.accuracy >= 0.25 ? 'pred-acc-mid' : 'pred-acc-low';
+    const latestTitle = lang === 'zh' ? p.latest.title_zh : p.latest.title;
+    const latestLabel = lang === 'zh' ? '最新事件' : 'Latest event';
+    const nextLabel = lang === 'zh' ? '预测下一步' : 'Predicted next';
+    const accLabel = lang === 'zh' ? `准确率 ${accPct}%（${p.correct}/${p.total}）` : `Accuracy ${accPct}% (${p.correct}/${p.total})`;
+
+    const nextChips = p.next_predictions.map(n =>
+      `<div class="pred-chip"><div class="pred-chip-dot" style="background:${cc(n.category)}"></div><span class="pred-chip-cat">${catLabel(n.category)}</span><span class="pred-chip-pct">${(n.probability*100).toFixed(1)}%</span></div>`
+    ).join('');
+
+    const div = document.createElement('div');
+    div.className = 'pred-country';
+    div.innerHTML = `
+      <div class="pred-header">
+        <span class="pred-name">${country}</span>
+        <span class="pred-acc ${accClass}">${accLabel}</span>
+      </div>
+      <div class="pred-latest">${latestLabel}: ${latestTitle} (${yl(p.latest.year)}) · ${catLabel(p.latest.category)}</div>
+      <div style="font-size:0.7rem;color:#665566;margin-bottom:4px">${nextLabel}:</div>
+      <div class="pred-next">${nextChips}</div>`;
+    predList.appendChild(div);
+  });
+
+  // Aligned pairs
+  const al = document.getElementById('aligned-list');
+  al.innerHTML = '';
+  d.aligned.forEach(p => {
+    const titleA = lang === 'zh' ? p.a.title_zh : p.a.title;
+    const titleB = lang === 'zh' ? p.b.title_zh : p.b.title;
+    const descA  = lang === 'zh' ? p.a.description_zh : p.a.description;
+    const descB  = lang === 'zh' ? p.b.description_zh : p.b.description;
+    const row = document.createElement('div');
+    row.className = 'aligned-pair';
+    row.innerHTML = `
+      <div class="ap-event ap-left">
+        <div class="ap-title">${titleA}</div>
+        <div class="ap-year">${yl(p.a.year)}</div>
+        <div class="ap-desc">${descA.slice(0, 100)}${descA.length > 100 ? '…' : ''}</div>
+      </div>
+      <div class="ap-cat">
+        <div class="ap-dot" style="background:${cc(p.category)}"></div>
+        <div class="ap-cat-label">${catLabel(p.category)}</div>
+      </div>
+      <div class="ap-event ap-right">
+        <div class="ap-title">${titleB}</div>
+        <div class="ap-year">${yl(p.b.year)}</div>
+        <div class="ap-desc">${descB.slice(0, 100)}${descB.length > 100 ? '…' : ''}</div>
+      </div>`;
+    al.appendChild(row);
+  });
+
+  // Side timelines
+  ['a', 'b'].forEach(side => {
+    const el = document.getElementById(`side-${side}`);
+    el.innerHTML = '';
+    d[`timeline_${side}`].forEach(ev => {
+      const title = lang === 'zh' ? ev.title_zh : ev.title;
+      const row = document.createElement('div');
+      row.className = 'side-ev';
+      row.innerHTML = `<span class="side-year">${yl(ev.year)}</span><div class="side-dot" style="background:${cc(ev.category)}"></div><span class="side-title" title="${title}">${title}</span>`;
+      el.appendChild(row);
+    });
+  });
+
+  // Lang UI
+  document.getElementById('lang-btn').textContent = lang === 'en' ? '中文' : 'EN';
+  document.getElementById('page-title').textContent = lang === 'zh' ? '文明对比' : 'Compare Civilizations';
+  document.getElementById('page-subtitle').textContent = lang === 'zh' ? '结构性对齐 — 它们处于同一轨迹的哪个位置？' : 'Side-by-side structural alignment — where are they on the same trajectory?';
+  document.getElementById('sim-label').textContent = lang === 'zh' ? '结构相似度：' : 'Structural similarity:';
+  document.getElementById('aligned-title').textContent = lang === 'zh' ? '对齐的事件对' : 'Aligned Event Pairs';
+  document.getElementById('side-title').textContent = lang === 'zh' ? '完整时间线' : 'Full Timelines';
+}
+
+document.getElementById('lang-btn').addEventListener('click', () => { lang = lang === 'en' ? 'zh' : 'en'; localStorage.setItem('rh-lang', lang); render(); });
+render();
+</script>
+</body>
+</html>

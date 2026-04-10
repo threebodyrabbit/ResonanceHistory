@@ -15,7 +15,9 @@ venv/
 # Output
 *.html
 !templates/visualization.html
-!docs/index.html
+!templates/transitions.html
+!templates/compare.html
+!docs/*.html
 
 # IDE
 .vscode/

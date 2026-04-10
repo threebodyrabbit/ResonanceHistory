@@ -43,11 +43,14 @@ def main():
 
     if args.transitions:
         from resonancehistory.render.graph_renderer import render_transitions
+        from resonancehistory.render.compare_renderer import render_comparison
         trans_path = args.output.replace('.html', '_transitions.html')
+        compare_path = args.output.replace('.html', '_compare.html')
         render_transitions(events, output_path=trans_path)
+        render_comparison(events, output_path=compare_path)
         if args.open:
             import webbrowser, pathlib
-            webbrowser.open(pathlib.Path(trans_path).resolve().as_uri())
+            webbrowser.open(pathlib.Path(compare_path).resolve().as_uri())
 
     if args.open and not args.transitions:
         import webbrowser, pathlib

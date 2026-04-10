@@ -94,7 +94,8 @@ STRICT RULES — follow these exactly:
    "resonance_reasons" must be an object mapping each resonance id to a deep, analytical 1-2 sentence explanation in ENGLISH of the STRUCTURAL PATTERN that connects these two events — not surface similarity, but the underlying historical dynamic. Focus on how economic collapse, imperial overreach, peasant revolt, plague, climate shock, or ideological rupture created the same cascading pattern in different civilizations that had no contact with each other. Example: "Both empires collapsed not from external conquest alone, but from the same internal spiral: currency debasement funding endless frontier wars, which triggered tax revolts among peasants, which starved the military of recruits, accelerating the very collapse the taxes were meant to prevent." Avoid generic statements like "both were revolutions" or "both marked the rise of new powers."
    "resonance_reasons_zh" must be the same object but with the explanation translated into Simplified Chinese.
 8. "id" must be a lowercase hyphenated slug, unique within the array.
-9. "category" must be one of: collapse, revolution, cultural_peak, war, discovery, migration, pandemic, disaster.
+9. "category" must be one of: collapse, revolution, cultural_peak, war, discovery, migration, pandemic, disaster, technology, diplomacy, economic_crisis, economic_boom, reform, independence, civil_war, colonization.
+   Choose the most specific category. Use "technology" for scientific/technological breakthroughs, "diplomacy" for treaties/alliances/international relations, "economic_crisis" for recessions/depressions/hyperinflation, "economic_boom" for trade expansions/industrial growth, "reform" for major policy/legal reforms, "independence" for independence movements, "civil_war" for internal armed conflicts, "colonization" for colonial expansion.
 10. For East Asian regions (China, Japan, Korea, Vietnam, Mongolia), populate "title_local" and "description_local" in the region's native script.
     For ALL events regardless of region, also populate:
     - "title_zh": the event title translated into Simplified Chinese
@@ -118,7 +119,7 @@ def _user_prompt(region: str, era: str, count: int) -> str:
 
 # ── Historian ──────────────────────────────────────────────────────────────
 class Historian:
-    def __init__(self, model: str = "gemini-2.5-flash"):
+    def __init__(self, model: str = "gemini-2.5-flash-lite"):
         self.client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
         self.model = model
 
@@ -163,26 +164,24 @@ class Historian:
     async def _batch_async(
         self, requests: list[tuple[str, str, int]]
     ) -> list[HistoricalEvent]:
-        sem = asyncio.Semaphore(8)  # max 8 concurrent requests
-
-        async def bounded(r, e, c):
-            async with sem:
-                for attempt in range(3):
-                    try:
-                        return await self._call_gemini_async(r, e, c)
-                    except Exception as ex:
-                        if attempt == 2:
-                            raise
-                        wait = 5 * (attempt + 1)
-                        print(f"[retry {attempt+1}] {r} — {ex.__class__.__name__}, waiting {wait}s...")
-                        await asyncio.sleep(wait)
-
-        tasks = [bounded(r, e, c) for r, e, c in requests]
-        batches = await asyncio.gather(*tasks)
+        # Sequential with delay to avoid rate limits
         events = []
-        for (region, era, count), data in zip(requests, batches):
-            _save_cache(_cache_key(region, era, count), data)
-            events.extend(_parse_events(data, region))
+        for i, (r, e, c) in enumerate(requests):
+            print(f"[api call {i+1}/{len(requests)}] {r} / {e}")
+            for attempt in range(5):
+                try:
+                    data = await self._call_gemini_async(r, e, c)
+                    _save_cache(_cache_key(r, e, c), data)
+                    events.extend(_parse_events(data, r))
+                    break
+                except Exception as ex:
+                    if attempt == 4:
+                        print(f"[FAILED] {r} after 5 attempts: {ex}")
+                        break
+                    wait = 15 * (attempt + 1)
+                    print(f"  [retry {attempt+1}] {ex.__class__.__name__}, waiting {wait}s...")
+                    await asyncio.sleep(wait)
+            await asyncio.sleep(2)  # pause between regions
         return events
 
     def _call_gemini(self, region: str, era: str, count: int) -> list[dict]:

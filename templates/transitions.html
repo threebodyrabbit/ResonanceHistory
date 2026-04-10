@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>ResonanceHistory — Transition Patterns</title>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0d0d1a; color: #e8e0d0; font-family: Georgia, serif; min-height: 100vh; padding: 24px; }
+    h1 { font-size: 1.2rem; color: #c9a96e; margin-bottom: 4px; }
+    .subtitle { font-size: 0.78rem; color: #554466; margin-bottom: 24px; }
+    #page-header { display: flex; align-items: baseline; margin-bottom: 4px; }
+    #lang-btn { background: #1a1530; border: 1px solid #3a2a5a; color: #9a8aaa; border-radius: 4px; padding: 3px 10px; cursor: pointer; font-size: 0.78rem; margin-left: 12px; }
+    #lang-btn:hover { border-color: #c9a96e; color: #c9a96e; }
+
+    .stats { display: flex; gap: 20px; margin-bottom: 24px; flex-wrap: wrap; }
+    .stat { background: rgba(255,255,255,0.03); border: 1px solid #1e1a2e; border-radius: 8px; padding: 10px 16px; }
+    .stat-val { font-size: 1.5rem; color: #c9a96e; }
+    .stat-label { font-size: 0.65rem; color: #554466; margin-top: 2px; }
+
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .panel { background: rgba(255,255,255,0.03); border: 1px solid #1e1a2e; border-radius: 10px; padding: 16px; }
+    .panel h2 { font-size: 0.82rem; color: #c9a96e; margin-bottom: 12px; letter-spacing: 0.06em; }
+    .panel-row { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+    #force-graph { width: 100%; height: 400px; }
+    .node circle { stroke: #0d0d1a; stroke-width: 1.5px; cursor: pointer; }
+    .node text { font-size: 11px; fill: #e8e0d0; pointer-events: none; }
+    .link { stroke-opacity: 0.6; fill: none; }
+
+    #heatmap { width: 100%; overflow-x: auto; }
+    .heatmap-label { font-size: 10px; fill: #776677; }
+    .heatmap-val { font-size: 9px; fill: #e8e0d0; pointer-events: none; }
+
+    .top-list { list-style: none; }
+    .top-item { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #1a1530; font-size: 0.76rem; flex-wrap: wrap; }
+    .top-item:last-child { border-bottom: none; }
+    .top-rank { color: #443355; width: 18px; text-align: right; flex-shrink: 0; font-size: 0.68rem; }
+    .top-arrow { color: #5a4a8a; flex-shrink: 0; }
+    .top-from, .top-to { padding: 2px 7px; border-radius: 10px; font-size: 0.7rem; }
+    .top-bar-wrap { flex: 1; background: #1a1530; border-radius: 3px; height: 5px; overflow: hidden; min-width: 40px; }
+    .top-bar { height: 100%; border-radius: 3px; }
+    .top-prob { color: #c9a96e; font-size: 0.7rem; width: 36px; text-align: right; flex-shrink: 0; }
+    .top-count { color: #443355; font-size: 0.65rem; width: 28px; text-align: right; flex-shrink: 0; }
+
+    #country-tabs { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 12px; }
+    .ctab { background: #1a1530; border: 1px solid #2a1a3a; border-radius: 4px; padding: 3px 9px; font-size: 0.7rem; color: #9a8aaa; cursor: pointer; }
+    .ctab.active { border-color: #c9a96e; color: #c9a96e; }
+    #country-path { overflow-y: auto; max-height: 400px; }
+    .cp-row { display: flex; align-items: center; margin-bottom: 4px; }
+    .cp-year { font-size: 0.58rem; color: #443355; width: 54px; flex-shrink: 0; text-align: right; padding-right: 6px; }
+    .cp-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .cp-label { font-size: 0.68rem; margin-left: 5px; flex-shrink: 0; }
+    .cp-title { font-size: 0.65rem; color: #554466; margin-left: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+
+    #tooltip { position: fixed; background: rgba(10,8,22,0.97); border: 1px solid #4a3a7a; border-radius: 7px; padding: 8px 12px; font-size: 0.73rem; color: #e8e0d0; pointer-events: none; opacity: 0; transition: opacity 0.15s; z-index: 100; max-width: 220px; line-height: 1.5; }
+  </style>
+</head>
+<body>
+
+<nav style="display:flex;gap:0;border-bottom:1px solid #1e1a2e;margin-bottom:20px;">
+  <a href="world.html" style="padding:10px 20px;color:#665566;text-decoration:none;font-size:0.82rem;">Map</a>
+  <a href="world_transitions.html" style="padding:10px 20px;color:#c9a96e;text-decoration:none;font-size:0.82rem;border-bottom:2px solid #c9a96e;">Transitions</a>
+  <a href="world_compare.html" style="padding:10px 20px;color:#665566;text-decoration:none;font-size:0.82rem;">Compare</a>
+</nav>
+
+<div id="page-header">
+  <h1 id="page-title">ResonanceHistory — Transition Patterns</h1>
+  <button id="lang-btn">中文</button>
+</div>
+<p class="subtitle" id="page-subtitle">How historical event types follow each other across civilizations</p>
+
+<div class="stats">
+  <div class="stat"><div class="stat-val" id="stat-events">—</div><div class="stat-label" data-key="events">Total Events</div></div>
+  <div class="stat"><div class="stat-val" id="stat-transitions">—</div><div class="stat-label" data-key="transitions">Transitions Observed</div></div>
+  <div class="stat"><div class="stat-val" id="stat-regions">—</div><div class="stat-label" data-key="regions">Regions</div></div>
+</div>
+
+<div class="grid">
+  <div class="panel">
+    <h2 data-key="graph">TRANSITION GRAPH</h2>
+    <svg id="force-graph"></svg>
+  </div>
+  <div class="panel">
+    <h2 data-key="heatmap">TRANSITION HEATMAP — P(next|current) · row=current, col=next</h2>
+    <div id="heatmap"></div>
+  </div>
+  <div class="panel-row">
+    <div class="panel">
+      <h2 data-key="top">TOP TRANSITIONS</h2>
+      <ul class="top-list" id="top-list"></ul>
+    </div>
+    <div class="panel">
+      <h2 data-key="country-paths">COUNTRY EVENT PATHS</h2>
+      <div id="country-tabs"></div>
+      <div id="country-path"></div>
+    </div>
+  </div>
+</div>
+
+<div id="tooltip"></div>
+
+<script>
+const DATA = {{ data_json }};
+
+const CATS   = DATA.categories;
+const PROBS  = DATA.probs;
+const COUNTS = DATA.counts;
+const TOP    = DATA.top_transitions;
+const STATS  = DATA.stats;
+
+const CAT_COLOR = {
+  collapse:'#e05050', revolution:'#e08030', cultural_peak:'#50c0a0',
+  war:'#c04060', discovery:'#5090e0', migration:'#a070d0',
+  pandemic:'#d0a020', disaster:'#a06030',
+  technology:'#40b0d0', diplomacy:'#6090a0', economic_crisis:'#d06040',
+  economic_boom:'#60c060', reform:'#a0a0e0', independence:'#e0a050',
+  civil_war:'#d04080', colonization:'#8a6040',
+};
+const cc = c => CAT_COLOR[c] || '#888';
+const yl = y => y < 0 ? `${Math.abs(y)} BCE` : `${y} CE`;
+
+// ── Language ───────────────────────────────────────────────────────────────
+const CAT_ZH = { collapse:'崩溃', revolution:'革命', cultural_peak:'文化巅峰', war:'战争', discovery:'发现', migration:'迁徙', pandemic:'瘟疫', disaster:'灾难', technology:'科技突破', diplomacy:'外交', economic_crisis:'经济危机', economic_boom:'经济繁荣', reform:'改革', independence:'独立', civil_war:'内战', colonization:'殖民' };
+const UI = {
+  en: { title:'ResonanceHistory — Transition Patterns', subtitle:'How historical event types follow each other across civilizations', events:'Total Events', transitions:'Transitions Observed', regions:'Regions', graph:'TRANSITION GRAPH', heatmap:'TRANSITION HEATMAP — P(next|current) · row=current, col=next', top:'TOP TRANSITIONS', eg:'e.g.', langBtn:'中文', 'country-paths':'COUNTRY EVENT PATHS' },
+  zh: { title:'ResonanceHistory — 历史转变规律', subtitle:'历史事件类型如何在各文明中相互演变', events:'历史事件总数', transitions:'转变次数', regions:'地区数量', graph:'转变关系图', heatmap:'转变热力图 — P(下一个|当前) · 行=当前，列=下一个', top:'最常见转变', eg:'例如', langBtn:'EN', 'country-paths':'国家历史事件路径' },
+};
+let lang = localStorage.getItem('rh-lang') || 'en';
+const catLabel = c => lang === 'zh' ? (CAT_ZH[c] || c) : c.replace('_',' ');
+
+function applyLang() {
+  const u = UI[lang];
+  document.getElementById('page-title').textContent = u.title;
+  document.getElementById('page-subtitle').textContent = u.subtitle;
+  document.getElementById('lang-btn').textContent = u.langBtn;
+  ['events','transitions','regions','graph','heatmap','top','country-paths'].forEach(k => {
+    const el = document.querySelector(`[data-key="${k}"]`);
+    if (el) el.textContent = u[k];
+  });
+  d3.selectAll('.node text').text(d => catLabel(d.id).slice(0,8));
+  d3.selectAll('.hm-row-label').text(d => catLabel(d));
+  d3.selectAll('.hm-col-label').text(d => catLabel(d));
+  buildTopList();
+  buildCountryPath();
+}
+document.getElementById('lang-btn').addEventListener('click', () => { lang = lang==='en'?'zh':'en'; localStorage.setItem('rh-lang',lang); applyLang(); });
+
+// ── Stats ──────────────────────────────────────────────────────────────────
+document.getElementById('stat-events').textContent = STATS.total_events.toLocaleString();
+document.getElementById('stat-transitions').textContent = STATS.total_transitions.toLocaleString();
+document.getElementById('stat-regions').textContent = STATS.total_regions.toLocaleString();
+
+const tooltip = document.getElementById('tooltip');
+const showTip = (html, x, y) => { tooltip.innerHTML = html; tooltip.style.left=(x+14)+'px'; tooltip.style.top=(y-10)+'px'; tooltip.style.opacity=1; };
+const hideTip = () => { tooltip.style.opacity=0; };
+
+// ── Force graph ────────────────────────────────────────────────────────────
+const fgEl = document.getElementById('force-graph');
+const FW = fgEl.parentElement.clientWidth - 32;
+const FH = 400;
+fgEl.setAttribute('width', FW); fgEl.setAttribute('height', FH);
+const svg = d3.select('#force-graph');
+
+svg.append('defs').selectAll('marker').data(CATS).join('marker')
+  .attr('id', d => `arrow-${d}`).attr('viewBox','0 -4 8 8').attr('refX',22).attr('refY',0)
+  .attr('markerWidth',6).attr('markerHeight',6).attr('orient','auto')
+  .append('path').attr('d','M0,-4L8,0L0,4').attr('fill', d => cc(d));
+
+const links = [];
+CATS.forEach(from => Object.entries(PROBS[from]||{}).forEach(([to,prob]) => {
+  if (prob >= 0.10) links.push({ source:from, target:to, prob, count:(COUNTS[from]||{})[to]||0 });
+}));
+const nodes = CATS.map(id => ({ id }));
+
+const sim = d3.forceSimulation(nodes)
+  .force('link', d3.forceLink(links).id(d=>d.id).distance(110))
+  .force('charge', d3.forceManyBody().strength(-300))
+  .force('center', d3.forceCenter(FW/2, FH/2))
+  .force('collision', d3.forceCollide(36));
+
+const linkEl = svg.append('g').selectAll('path').data(links).join('path')
+  .attr('class','link').attr('stroke', d=>cc(d.source.id||d.source))
+  .attr('stroke-width', d=>Math.max(1,d.prob*8))
+  .attr('marker-end', d=>`url(#arrow-${d.source.id||d.source})`)
+  .on('mousemove',(e,d)=>showTip(`<b>${d.source.id||d.source}</b> → <b>${d.target.id||d.target}</b><br>P=${(d.prob*100).toFixed(1)}%  Count:${d.count}`,e.clientX,e.clientY))
+  .on('mouseleave',hideTip);
+
+const nodeEl = svg.append('g').selectAll('g').data(nodes).join('g').attr('class','node')
+  .call(d3.drag()
+    .on('start',(e,d)=>{if(!e.active)sim.alphaTarget(0.3).restart();d.fx=d.x;d.fy=d.y;})
+    .on('drag', (e,d)=>{d.fx=e.x;d.fy=e.y;})
+    .on('end',  (e,d)=>{if(!e.active)sim.alphaTarget(0);d.fx=null;d.fy=null;}));
+nodeEl.append('circle').attr('r',20).attr('fill',d=>cc(d.id)).attr('fill-opacity',0.85);
+nodeEl.append('text').attr('dy','0.35em').attr('text-anchor','middle').text(d=>catLabel(d.id).slice(0,8));
+
+const linkArc = d => { const dx=d.target.x-d.source.x,dy=d.target.y-d.source.y,dr=Math.sqrt(dx*dx+dy*dy)*1.4; return `M${d.source.x},${d.source.y}A${dr},${dr} 0 0,1 ${d.target.x},${d.target.y}`; };
+sim.on('tick', () => { linkEl.attr('d',linkArc); nodeEl.attr('transform',d=>`translate(${d.x},${d.y})`); });
+
+// ── Heatmap ────────────────────────────────────────────────────────────────
+const hmW = Math.min(FW, 460);
+const cell = Math.floor((hmW - 80) / CATS.length);
+const hmH = cell * CATS.length + 80;
+const hmSvg = d3.select('#heatmap').append('svg').attr('width',hmW).attr('height',hmH);
+
+hmSvg.selectAll('.row-label').data(CATS).join('text').attr('class','heatmap-label hm-row-label')
+  .attr('x',74).attr('y',(d,i)=>80+i*cell+cell/2+4).attr('text-anchor','end').text(d=>catLabel(d));
+hmSvg.selectAll('.col-label').data(CATS).join('text').attr('class','heatmap-label hm-col-label')
+  .attr('x',(d,i)=>80+i*cell+cell/2).attr('y',72).attr('text-anchor','middle')
+  .attr('transform',(d,i)=>`rotate(-40,${80+i*cell+cell/2},72)`).text(d=>catLabel(d));
+
+CATS.forEach((from,ri) => CATS.forEach((to,ci) => {
+  const prob = (PROBS[from]||{})[to]||0;
+  const x=80+ci*cell, y=80+ri*cell;
+  hmSvg.append('rect').attr('x',x).attr('y',y).attr('width',cell-2).attr('height',cell-2).attr('rx',3)
+    .attr('fill', prob>0?cc(from):'#1a1530').attr('fill-opacity', prob>0?Math.max(0.08,prob):1)
+    .on('mousemove',e=>showTip(`<b>${from}</b> → <b>${to}</b><br>P=${(prob*100).toFixed(1)}%  Count:${(COUNTS[from]||{})[to]||0}`,e.clientX,e.clientY))
+    .on('mouseleave',hideTip);
+  if (prob>=0.1) hmSvg.append('text').attr('class','heatmap-val').attr('x',x+cell/2-1).attr('y',y+cell/2+3).attr('text-anchor','middle').text((prob*100).toFixed(0)+'%');
+}));
+
+// ── Top transitions ────────────────────────────────────────────────────────
+const maxCount = TOP[0]?.count || 1;
+function buildTopList() {
+  const ul = document.getElementById('top-list');
+  ul.innerHTML = '';
+  const u = UI[lang];
+  TOP.forEach((t,i) => {
+    const {from,to,prob,count,example} = t;
+    const exHtml = example ? `<div style="font-size:0.63rem;color:#554466;margin-top:3px;padding-left:4px;border-left:2px solid #2a1a3a">${u.eg} <span style="color:#9a8aaa">${lang==='zh'?example.a_title_zh:example.a_title}</span> (${yl(example.a_year)}) → <span style="color:#9a8aaa">${lang==='zh'?example.b_title_zh:example.b_title}</span> (${yl(example.b_year)})</div>` : '';
+    const li = document.createElement('li');
+    li.className = 'top-item';
+    li.innerHTML = `<span class="top-rank">${i+1}</span><span class="top-from" style="background:${cc(from)}22;color:${cc(from)}">${catLabel(from)}</span><span class="top-arrow">→</span><span class="top-to" style="background:${cc(to)}22;color:${cc(to)}">${catLabel(to)}</span><div class="top-bar-wrap"><div class="top-bar" style="width:${(count/maxCount*100).toFixed(0)}%;background:${cc(from)}"></div></div><span class="top-prob">${(prob*100).toFixed(1)}%</span><span class="top-count">${count}×</span><div style="width:100%;padding-left:26px">${exHtml}</div>`;
+    ul.appendChild(li);
+  });
+}
+buildTopList();
+
+// ── Country paths ──────────────────────────────────────────────────────────
+const COUNTRY_PATHS = DATA.country_paths;
+const COUNTRIES = Object.keys(COUNTRY_PATHS);
+let activeCountry = COUNTRIES[0];
+
+function buildCountryPath() {
+  const tabsEl = document.getElementById('country-tabs');
+  const pathEl = document.getElementById('country-path');
+  tabsEl.innerHTML = '';
+  COUNTRIES.forEach(c => {
+    const btn = document.createElement('button');
+    btn.className = 'ctab' + (c===activeCountry?' active':'');
+    btn.textContent = c;
+    btn.addEventListener('click', () => { activeCountry=c; buildCountryPath(); });
+    tabsEl.appendChild(btn);
+  });
+  pathEl.innerHTML = '';
+  (COUNTRY_PATHS[activeCountry]||[]).forEach((ev,i,arr) => {
+    const row = document.createElement('div');
+    row.className = 'cp-row';
+    const title = lang==='zh' ? ev.title_zh : ev.title;
+    row.innerHTML = `<span class="cp-year">${yl(ev.year)}</span><div class="cp-dot" style="background:${cc(ev.category)}"></div><span class="cp-label" style="color:${cc(ev.category)}">${catLabel(ev.category)}</span><span class="cp-title" title="${title}">${title}</span>`;
+    pathEl.appendChild(row);
+    if (i < arr.length-1) {
+      const a = document.createElement('div');
+      a.className = 'cp-row';
+      a.innerHTML = `<span class="cp-year"></span><span style="color:#2a1a3a;padding-left:2px;font-size:0.6rem">↓</span>`;
+      pathEl.appendChild(a);
+    }
+  });
+}
+buildCountryPath();
+</script>
+</body>
+</html>
